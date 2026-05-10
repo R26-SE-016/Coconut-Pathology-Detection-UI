@@ -10,7 +10,7 @@ interface LogoProps {
 const sizes = {
   sm: 32,
   md: 40,
-  lg: 56,
+  lg: 52,
 };
 
 export default function Logo({ size = 'md', showText = true }: LogoProps) {
@@ -18,14 +18,34 @@ export default function Logo({ size = 'md', showText = true }: LogoProps) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: size === 'lg' ? 14 : 10 }}>
-      <Image
-        src="/logo.png"
-        alt="CocoCastAI"
-        width={px}
-        height={px}
-        style={{ borderRadius: '50%' }}
-        priority
-      />
+      {/* New clean logo icon with transparency/circular design */}
+      <div
+        style={{
+          width: px,
+          height: px,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          flexShrink: 0,
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 0 15px rgba(34, 197, 94, 0.2)',
+        }}
+      >
+        <Image
+          src="/Logo.png"
+          alt="CocoCastAI"
+          width={px}
+          height={px}
+          style={{
+            objectFit: 'contain',
+            padding: '2px',
+          }}
+          priority
+        />
+      </div>
       {showText && (
         <span
           style={{

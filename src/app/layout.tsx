@@ -15,6 +15,10 @@ export const metadata: Metadata = {
     "UAV",
     "plant health",
   ],
+  icons: {
+    icon: "/Logo.png",
+    apple: "/Logo.png",
+  },
 };
 
 export default function RootLayout({
