@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   HiOutlineClipboardList,
@@ -12,34 +12,56 @@ import StatCard from '@/components/StatCard';
 import DiseaseChart from '@/components/DiseaseChart';
 import DiseaseBadge from '@/components/DiseaseBadge';
 import ConfidenceBar from '@/components/ConfidenceBar';
-import { DEMO_DIAGNOSTICS, DEMO_ESTATES } from '@/lib/demo-data';
+import { DEMO_DIAGNOSTICS } from '@/lib/demo-data';
+import { getDiagnosticHistory } from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 
 export default function DashboardOverview() {
+  const [diagnostics, setDiagnostics] = useState<any[]>(DEMO_DIAGNOSTICS);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch real data from the backend
+    getDiagnosticHistory('demo-user-123')
+      .then((res) => {
+        if (res.diagnostics && res.diagnostics.length > 0) {
+          const mapped = res.diagnostics.map((d: any) => ({
+            ...d,
+            location: d.gps || d.location || { lat: 0, lng: 0 },
+            confidence: d.confidence || 0,
+            disease_class: d.disease_class || 'healthy leaves',
+          }));
+          setDiagnostics(mapped);
+        }
+      })
+      .catch((err) => console.log('Using demo data fallback:', err))
+      .finally(() => setIsLoading(false));
+  }, []);
+
   const stats = useMemo(() => {
-    const totalDiag = DEMO_DIAGNOSTICS.length;
-    const healthyCount = DEMO_DIAGNOSTICS.filter(
+    const totalDiag = diagnostics.length;
+    const healthyCount = diagnostics.filter(
       (d) => d.disease_class === 'healthy leaves'
     ).length;
     const diseasedCount = totalDiag - healthyCount;
     const avgConf =
-      DEMO_DIAGNOSTICS.reduce((sum, d) => sum + d.confidence, 0) / totalDiag;
+      totalDiag > 0
+        ? diagnostics.reduce((sum, d) => sum + d.confidence, 0) / totalDiag
+        : 0;
 
     return { totalDiag, healthyCount, diseasedCount, avgConf };
-  }, []);
+  }, [diagnostics]);
 
-  // Weekly trend data
+  // Weekly trend data — KEEPING MOCK AS REQUESTED
   const weeklyData = useMemo(() => {
     const days = ['May 5', 'May 6', 'May 7', 'May 8', 'May 9', 'May 10'];
-    return days.map((day) => {
-      const count = DEMO_DIAGNOSTICS.filter((d) =>
-        d.captured_at?.includes(day.replace('May ', '2026-05-'))
-      ).length;
-      return { day, scans: count || Math.floor(Math.random() * 4) + 1 };
-    });
+    return days.map((day) => ({
+      day,
+      scans: Math.floor(Math.random() * 8) + 2 // Randomized mock data
+    }));
   }, []);
 
-  const recentDiag = DEMO_DIAGNOSTICS.slice(0, 6);
+  const recentDiag = useMemo(() => diagnostics.slice(0, 6), [diagnostics]);
 
   return (
     <div className="page-content">
@@ -128,7 +150,7 @@ export default function DashboardOverview() {
 
       {/* Charts Row */}
       <div className="grid-2" style={{ marginBottom: 'var(--space-8)' }}>
-        <DiseaseChart diagnostics={DEMO_DIAGNOSTICS} title="Disease Distribution" />
+        <DiseaseChart diagnostics={diagnostics} title="Disease Distribution" />
 
         {/* Weekly Scan Trend */}
         <div className="glass-card-static" style={{ padding: 'var(--space-5)' }}>
