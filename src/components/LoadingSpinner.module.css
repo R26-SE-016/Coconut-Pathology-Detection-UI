@@ -1,0 +1,51 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  gap: var(--space-5);
+}
+
+.spinner {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border: 3px solid transparent;
+  border-top-color: var(--green-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.ring:nth-child(2) {
+  inset: 6px;
+  border-top-color: var(--green-300);
+  animation-duration: 1.5s;
+  animation-direction: reverse;
+}
+
+.dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green-400);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+.message {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
