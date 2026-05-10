@@ -64,3 +64,20 @@ export async function getDiagnosticHistory(
     `${API_BASE}/get_diagnostic_history?${params}`
   );
 }
+
+export async function predictMobileDisease(file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const res = await fetch(`${API_BASE}/predict_mobile_disease`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `API error: ${res.status}`);
+  }
+
+  return res.json();
+}
