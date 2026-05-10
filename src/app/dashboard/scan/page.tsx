@@ -12,6 +12,7 @@ import {
   HiOutlineBookOpen,
 } from 'react-icons/hi';
 import Link from 'next/link';
+import { syncMobileDiagnostics } from '@/lib/api';
 
 // Simulated MobileNetV2 inference result
 interface ScanResult {
@@ -72,7 +73,31 @@ export default function ScanPage() {
         if (prev >= 100) {
           clearInterval(interval);
           setAnalyzing(false);
-          setResult(simulateInference());
+          const scanRes = simulateInference();
+          setResult(scanRes);
+
+          // Attempt to sync with backend if it's running
+          syncMobileDiagnostics({
+            user_id: 'demo-user-123',
+            device_id: 'web-dashboard',
+            estate_id: 'demo-estate-001',
+            batch: [
+              {
+                disease_class: scanRes.disease_class,
+                confidence: scanRes.confidence,
+                gps: {
+                  lat: 7.2906 + (Math.random() * 0.1 - 0.05),
+                  lng: 80.6337 + (Math.random() * 0.1 - 0.05),
+                },
+                captured_at: new Date().toISOString(),
+                image_ref: `mobile_uploads/demo-user-123/scan_${Date.now()}.jpg`,
+                local_id: `local-${Date.now()}`,
+              },
+            ],
+          })
+            .then((res) => console.log('Successfully synced to backend:', res))
+            .catch((err) => console.log('Backend sync skipped (backend might not be running):', err));
+
           return 100;
         }
         return prev + Math.random() * 20 + 8;
