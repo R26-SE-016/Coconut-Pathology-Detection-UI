@@ -20,7 +20,7 @@ export default function DiagnosticsPage() {
   useEffect(() => {
     getDiagnosticHistory('demo-user-123')
       .then((res) => {
-        if (res.diagnostics && res.diagnostics.length > 0) {
+        if (res.diagnostics) {
           // Map backend format to UI format if necessary
           const mapped = res.diagnostics.map((d: any) => ({
             ...d,
