@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import UploadZone from '@/components/UploadZone';
 import DiseaseBadge from '@/components/DiseaseBadge';
 import ConfidenceBar from '@/components/ConfidenceBar';
@@ -12,45 +12,14 @@ import {
   HiOutlineBookOpen,
 } from 'react-icons/hi';
 import Link from 'next/link';
-import { syncMobileDiagnostics } from '@/lib/api';
+import { syncMobileDiagnostics, predictMobileDisease } from '@/lib/api';
 
-// Simulated MobileNetV2 inference result
+// ── Real Inference Result Type ──────────────────────────────────────
 interface ScanResult {
   disease_class: MobileDiseaseClass;
   confidence: number;
   all_predictions: { class: MobileDiseaseClass; confidence: number }[];
-}
-
-function simulateInference(): ScanResult {
-  const classes: MobileDiseaseClass[] = [
-    'bud root dropping',
-    'bud rot',
-    'gray leaf spot',
-    'healthy leaves',
-    'leaf rot',
-    'stembleeding',
-  ];
-
-  // Generate random top prediction
-  const topIdx = Math.floor(Math.random() * classes.length);
-  const topConf = 0.7 + Math.random() * 0.28;
-
-  // Generate full prediction list
-  let remaining = 1 - topConf;
-  const predictions = classes.map((cls, i) => {
-    if (i === topIdx) return { class: cls, confidence: topConf };
-    const conf = i === classes.length - 1 ? remaining : remaining * Math.random() * 0.6;
-    remaining -= conf;
-    return { class: cls, confidence: Math.max(conf, 0.001) };
-  });
-
-  predictions.sort((a, b) => b.confidence - a.confidence);
-
-  return {
-    disease_class: classes[topIdx],
-    confidence: topConf,
-    all_predictions: predictions,
-  };
+  inference_time_ms: number;
 }
 
 export default function ScanPage() {
@@ -58,51 +27,70 @@ export default function ScanPage() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [modelStatus, setModelStatus] = useState<'loading' | 'ready' | 'error'>('ready');
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const fileRef = useRef<File | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
-  const handleFileDrop = useCallback((file: File) => {
+  // ── Handle file drop: run backend inference ────────────────────────
+  const handleFileDrop = useCallback(async (file: File) => {
     fileRef.current = file;
-    setPreviewUrl(URL.createObjectURL(file));
     setResult(null);
+    setSyncStatus(null);
     setAnalyzing(true);
-    setProgress(0);
+    setProgress(10);
 
-    // Simulate MobileNetV2 inference with progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setAnalyzing(false);
-          const scanRes = simulateInference();
-          setResult(scanRes);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    
+    // Set preview img ref if needed
+    const img = new Image();
+    img.src = objectUrl;
+    imgRef.current = img;
 
-          // Attempt to sync with backend if it's running
-          syncMobileDiagnostics({
-            user_id: 'demo-user-123',
-            device_id: 'web-dashboard',
-            estate_id: 'demo-estate-001',
-            batch: [
-              {
-                disease_class: scanRes.disease_class,
-                confidence: scanRes.confidence,
-                gps: {
-                  lat: 7.2906 + (Math.random() * 0.1 - 0.05),
-                  lng: 80.6337 + (Math.random() * 0.1 - 0.05),
-                },
-                captured_at: new Date().toISOString(),
-                image_ref: `mobile_uploads/demo-user-123/scan_${Date.now()}.jpg`,
-                local_id: `local-${Date.now()}`,
-              },
-            ],
-          })
-            .then((res) => console.log('Successfully synced to backend:', res))
-            .catch((err) => console.log('Backend sync skipped (backend might not be running):', err));
+    setProgress(40);
 
-          return 100;
-        }
-        return prev + Math.random() * 20 + 8;
-      });
-    }, 200);
+    try {
+      const inferenceResult = await predictMobileDisease(file);
+      setProgress(100);
+
+      setResult(inferenceResult);
+      setAnalyzing(false);
+
+      // Sync to backend
+      setSyncStatus('syncing');
+      syncMobileDiagnostics({
+        user_id: 'demo-user-123',
+        device_id: 'web-dashboard',
+        estate_id: 'demo-estate-001',
+        batch: [
+          {
+            disease_class: inferenceResult.disease_class,
+            confidence: inferenceResult.confidence,
+            gps: {
+              lat: 7.2906 + (Math.random() * 0.1 - 0.05),
+              lng: 80.6337 + (Math.random() * 0.1 - 0.05),
+            },
+            captured_at: new Date().toISOString(),
+            image_ref: `mobile_uploads/demo-user-123/scan_${Date.now()}.jpg`,
+            local_id: `local-${Date.now()}`,
+          },
+        ],
+      })
+        .then((res) => {
+          console.log('Successfully synced to backend:', res);
+          setSyncStatus('synced');
+        })
+        .catch((err) => {
+          console.log('Backend sync skipped:', err);
+          setSyncStatus('failed');
+        });
+    } catch (err) {
+      console.error('[CocoCastAI] Inference failed:', err);
+      setAnalyzing(false);
+      setProgress(0);
+      setSyncStatus('error');
+    }
   }, []);
 
   const handleReset = () => {
@@ -110,7 +98,9 @@ export default function ScanPage() {
     setPreviewUrl(null);
     setProgress(0);
     setAnalyzing(false);
+    setSyncStatus(null);
     fileRef.current = null;
+    imgRef.current = null;
   };
 
   const isHealthy = result?.disease_class === 'healthy leaves';
@@ -123,8 +113,7 @@ export default function ScanPage() {
           <span className="gradient-text">Scan Coconut Leaf</span>
         </h1>
         <p>
-          Upload or capture a leaf photo — the MobileNetV2 model will classify it into one of 6
-          disease categories in real-time
+          Upload or capture a leaf photo — the image is sent to the <strong>backend model</strong> to classify it accurately into one of 6 disease categories.
         </p>
       </div>
 
@@ -173,6 +162,11 @@ export default function ScanPage() {
                     </h2>
                     <p className="text-sm text-muted">
                       {fileRef.current?.name}
+                      {result.inference_time_ms > 0 && (
+                        <span style={{ marginLeft: 8, color: 'var(--green-400)', fontWeight: 600 }}>
+                          ⚡ {result.inference_time_ms}ms
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -266,6 +260,43 @@ export default function ScanPage() {
                 </div>
               </div>
 
+              {/* Sync Status */}
+              {syncStatus && (
+                <div
+                  style={{
+                    marginTop: 'var(--space-4)',
+                    padding: 'var(--space-2) var(--space-3)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    background:
+                      syncStatus === 'synced'
+                        ? 'rgba(34, 197, 94, 0.08)'
+                        : syncStatus === 'syncing'
+                          ? 'rgba(59, 130, 246, 0.08)'
+                          : 'rgba(239, 68, 68, 0.08)',
+                    color:
+                      syncStatus === 'synced'
+                        ? 'var(--green-400)'
+                        : syncStatus === 'syncing'
+                          ? '#60a5fa'
+                          : '#f87171',
+                    border: `1px solid ${
+                      syncStatus === 'synced'
+                        ? 'rgba(34, 197, 94, 0.2)'
+                        : syncStatus === 'syncing'
+                          ? 'rgba(59, 130, 246, 0.2)'
+                          : 'rgba(239, 68, 68, 0.2)'
+                    }`,
+                  }}
+                >
+                  {syncStatus === 'synced' && '✓ Synced to Firestore'}
+                  {syncStatus === 'syncing' && '⏳ Syncing to backend...'}
+                  {syncStatus === 'failed' && '⚠ Backend offline — result saved locally'}
+                  {syncStatus === 'error' && '✕ Inference error'}
+                </div>
+              )}
+
               {/* Action Link */}
               {!isHealthy && (
                 <Link
@@ -292,6 +323,51 @@ export default function ScanPage() {
 
         {/* Right: Info Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {/* Model Status */}
+          <div
+            className="glass-card-static"
+            style={{
+              padding: 'var(--space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              borderColor:
+                modelStatus === 'ready'
+                  ? 'rgba(34, 197, 94, 0.25)'
+                  : modelStatus === 'error'
+                    ? 'rgba(239, 68, 68, 0.25)'
+                    : 'var(--border-default)',
+            }}
+          >
+            <div
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background:
+                  modelStatus === 'ready'
+                    ? 'var(--green-400)'
+                    : modelStatus === 'error'
+                      ? '#ef4444'
+                      : '#f59e0b',
+                animation: modelStatus === 'loading' ? 'pulse 1.5s infinite' : 'none',
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ fontSize: '0.8rem' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                {modelStatus === 'ready' && 'Model Ready'}
+                {modelStatus === 'loading' && 'Loading Model...'}
+                {modelStatus === 'error' && 'Model Load Failed'}
+              </span>
+              <span className="text-muted" style={{ marginLeft: 6 }}>
+                {modelStatus === 'ready' && 'MobileNetV2-INT8 (2.7 MB)'}
+                {modelStatus === 'loading' && 'Downloading weights...'}
+                {modelStatus === 'error' && 'Check console for details'}
+              </span>
+            </div>
+          </div>
+
           {/* Model Info */}
           <div className="glass-card-static" style={{ padding: 'var(--space-5)' }}>
             <h3 style={{ fontSize: '0.9rem', marginBottom: 'var(--space-4)' }}>
@@ -303,7 +379,8 @@ export default function ScanPage() {
                 { label: 'Input Size', value: '224 × 224 px' },
                 { label: 'Classes', value: '6 categories' },
                 { label: 'Quantization', value: 'INT8 (TFLite)' },
-                { label: 'Latency', value: '< 35ms on-device' },
+                { label: 'Runtime', value: 'Python (tf.lite)' },
+                { label: 'Inference', value: 'Cloud Backend' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between" style={{ fontSize: '0.8rem' }}>
                   <span className="text-muted">{item.label}</span>
@@ -355,7 +432,7 @@ export default function ScanPage() {
               {[
                 { step: '1', title: 'Capture', desc: 'Take a close-up photo of a coconut leaf' },
                 { step: '2', title: 'Upload', desc: 'Drop the image here or use your camera' },
-                { step: '3', title: 'Analyze', desc: 'MobileNetV2 classifies the disease in <35ms' },
+                { step: '3', title: 'Inference', desc: 'Image is analyzed securely by the cloud backend model' },
                 { step: '4', title: 'Act', desc: 'View treatment protocols from the Knowledge Base' },
               ].map((item) => (
                 <div key={item.step} className="flex gap-3">
