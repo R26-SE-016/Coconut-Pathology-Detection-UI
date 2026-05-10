@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DEMO_DIAGNOSTICS } from '@/lib/demo-data';
+import { getDiagnosticHistory } from '@/lib/api';
+
 import { DISEASE_COLORS } from '@/lib/types';
 import DiseaseBadge from '@/components/DiseaseBadge';
 import ConfidenceBar from '@/components/ConfidenceBar';
@@ -12,18 +14,39 @@ const DiagnosticMapInner = dynamic(() => import('@/components/DiagnosticMap'), {
 export default function DiagnosticsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'map'>('table');
   const [filterDisease, setFilterDisease] = useState('all');
+  const [diagnostics, setDiagnostics] = useState<any[]>(DEMO_DIAGNOSTICS);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const diseases = useMemo(() => {
-    const set = new Set(DEMO_DIAGNOSTICS.map((d) => d.disease_class));
-    return Array.from(set);
+  useEffect(() => {
+    getDiagnosticHistory('demo-user-123')
+      .then((res) => {
+        if (res.diagnostics && res.diagnostics.length > 0) {
+          // Map backend format to UI format if necessary
+          const mapped = res.diagnostics.map((d: any) => ({
+            ...d,
+            // Ensure location is formatted correctly
+            location: d.gps || d.location || { lat: 0, lng: 0 },
+            confidence: d.confidence || 0,
+            disease_class: d.disease_class || 'healthy leaves',
+          }));
+          setDiagnostics(mapped);
+        }
+      })
+      .catch((err) => console.log('Backend not available, using demo data.', err))
+      .finally(() => setIsLoading(false));
   }, []);
 
+  const diseases = useMemo(() => {
+    const set = new Set(diagnostics.map((d) => d.disease_class));
+    return Array.from(set);
+  }, [diagnostics]);
+
   const filtered = useMemo(() => {
-    return DEMO_DIAGNOSTICS.filter((d) => {
+    return diagnostics.filter((d) => {
       if (filterDisease !== 'all' && d.disease_class !== filterDisease) return false;
       return true;
     });
-  }, [filterDisease]);
+  }, [filterDisease, diagnostics]);
 
   return (
     <div className="page-content">
@@ -32,6 +55,7 @@ export default function DiagnosticsPage() {
           <div>
             <h1>
               <span className="gradient-text">Diagnostic History</span>
+              {isLoading && <span style={{ fontSize: '1rem', marginLeft: 10, color: 'var(--text-muted)' }}>...</span>}
             </h1>
             <p>All leaf scans from MobileNetV2 classification</p>
           </div>
