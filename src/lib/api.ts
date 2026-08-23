@@ -69,15 +69,40 @@ export async function predictMobileDisease(file: File): Promise<any> {
   const formData = new FormData();
   formData.append('image', file);
 
-  const res = await fetch(`${API_BASE}/predict_mobile_disease`, {
-    method: 'POST',
-    body: formData,
-  });
+  const url = `${API_BASE.replace(/\/$/, '')}/predict_mobile_disease`;
+  
+  console.log(`[CocoCastAI] Calling backend inference: ${url}`);
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error: ${res.status}`);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      // Note: Do NOT set Content-Type header when using FormData
+    });
+
+    if (!res.ok) {
+      let errorDetail = '';
+      try {
+        const body = await res.json();
+        errorDetail = body.error || JSON.stringify(body);
+      } catch (e) {
+        errorDetail = `Status ${res.status}`;
+      }
+      throw new Error(`Backend API error: ${errorDetail}`);
+    }
+
+    return res.json();
+  } catch (err: any) {
+    console.error(`[CocoCastAI] API call failed for ${url}:`, err);
+    
+    if (err.message.includes('Failed to fetch')) {
+      throw new Error(
+        `Unable to reach the backend at ${url}. ` +
+        `Check if the Firebase Functions emulator is running (firebase emulators:start) ` +
+        `and that CORS is enabled in the function.`
+      );
+    }
+    throw err;
   }
-
-  return res.json();
 }
+
