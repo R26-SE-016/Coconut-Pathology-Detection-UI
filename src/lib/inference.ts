@@ -32,31 +32,73 @@ export interface InferenceResult {
 
 let scriptsLoaded = false;
 
-function loadScript(src: string): Promise<void> {
+function loadScript(src: string, checkGlobal?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (document.querySelector(`script[src="${src}"]`)) {
+    // Check if already loaded by looking for the global variable
+    if (checkGlobal && (window as any)[checkGlobal]) {
       resolve();
       return;
     }
+    
+    // Check if script tag exists but maybe hasn't loaded global yet
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      // If it exists, wait for it or just check periodically
+      const interval = setInterval(() => {
+        if (checkGlobal && (window as any)[checkGlobal]) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 50);
+      // Timeout after 5s
+      setTimeout(() => {
+        clearInterval(interval);
+        if (checkGlobal && !(window as any)[checkGlobal]) {
+           reject(new Error(`Script ${src} exists but global ${checkGlobal} never appeared.`));
+        } else {
+           resolve();
+        }
+      }, 5000);
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = src;
     script.async = true;
-    script.onload = () => resolve();
+    script.onload = () => {
+      if (checkGlobal) {
+        // Wait a tiny bit for global to be ready
+        let count = 0;
+        const i = setInterval(() => {
+          if ((window as any)[checkGlobal] || count > 10) {
+            clearInterval(i);
+            resolve();
+          }
+          count++;
+        }, 10);
+      } else {
+        resolve();
+      }
+    };
     script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
     document.head.appendChild(script);
   });
 }
 
 async function ensureScriptsLoaded(): Promise<void> {
+  // If already loaded via Layout Script tags, just return
+  if ((window as any).tf && (window as any).tflite) {
+    scriptsLoaded = true;
+    return;
+  }
+
   if (scriptsLoaded) return;
 
-  // Load TF.js core first, then TFLite plugin — exactly like the sandbox
-  await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js');
-  await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite/dist/tf-tflite.min.js');
+  console.log('[CocoCastAI] Scripts not found in layout, loading dynamically...');
+  await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js', 'tf');
+  await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite/dist/tf-tflite.min.js', 'tflite');
 
   scriptsLoaded = true;
-  console.log('[CocoCastAI] TF.js + TFLite scripts loaded from CDN.');
 }
 
 // ── Model cache ─────────────────────────────────────────────────────
@@ -72,12 +114,13 @@ export async function loadModel(): Promise<any> {
 
   await ensureScriptsLoaded();
 
-  const tflite = (window as any).tflite;
+  const tflite = (window as any).tflite || (globalThis as any).tflite;
   if (!tflite) {
     throw new Error('TFLite runtime not available. Check CDN scripts.');
   }
 
   console.log('[CocoCastAI] Loading MobileNetV2-INT8 model from', MODEL_PATH);
+  // Ensure absolute path for the model
   cachedModel = await tflite.loadTFLiteModel(MODEL_PATH);
   console.log('[CocoCastAI] Model loaded successfully.');
 
@@ -86,25 +129,19 @@ export async function loadModel(): Promise<any> {
 
 /**
  * Run real inference on an image element using the trained MobileNetV2-INT8 model.
- *
- * Preprocessing matches diagnostic_sandbox.html exactly:
- * - Resize to 224×224 via resizeNearestNeighbor
- * - Cast to int32 (0-255 pixel values, NO normalization)
- * - Expand dims to [1, 224, 224, 3]
- *
- * Post-processing:
- * - INT8 model outputs values in 0-255 range
- * - Convert to 0-1 probability by dividing by 255 if > 1.0
  */
 export async function runInference(
   imgElement: HTMLImageElement
 ): Promise<InferenceResult> {
   const model = await loadModel();
 
-  const tf = (window as any).tf;
+  const tf = (window as any).tf || (globalThis as any).tf;
   if (!tf) {
-    throw new Error('TF.js runtime not available. Check CDN scripts.');
+    throw new Error('TF.js runtime not available. Ensure layout scripts are loaded.');
   }
+
+  // Force global assignment to help internal TFLite logic
+  (window as any).tf = tf;
 
   const startTime = performance.now();
 
@@ -118,8 +155,20 @@ export async function runInference(
   });
 
   try {
+    console.log('[CocoCastAI] Running model.predict(tensor)...');
+    
+    // Safety check for TFLite environment: ensure window.tf is exactly our tf
+    if ((window as any).tf !== tf) {
+       (window as any).tf = tf;
+    }
+
     // Run prediction
     const output = model.predict(tensor);
+    
+    if (!output) {
+      throw new Error('Model prediction returned null output.');
+    }
+
     const probs: Float32Array = await output.data();
 
     const endTime = performance.now();
@@ -156,7 +205,10 @@ export async function runInference(
       all_predictions,
       inference_time_ms,
     };
+  } catch (err) {
+    console.error('[CocoCastAI] Internal model.predict error:', err);
+    throw err;
   } finally {
-    tensor.dispose();
+    if (tensor) tensor.dispose();
   }
 }
