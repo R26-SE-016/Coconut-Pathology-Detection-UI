@@ -13,6 +13,7 @@ import {
 } from 'react-icons/hi';
 import Link from 'next/link';
 import { syncMobileDiagnostics, predictMobileDisease } from '@/lib/api';
+import { runInference, loadModel } from '@/lib/inference';
 
 // ── Real Inference Result Type ──────────────────────────────────────
 interface ScanResult {
@@ -31,6 +32,17 @@ export default function ScanPage() {
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const fileRef = useRef<File | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // ── Pre-load model on mount ───────────────────────────────────────
+  useEffect(() => {
+    setModelStatus('loading');
+    loadModel()
+      .then(() => setModelStatus('ready'))
+      .catch((err) => {
+        console.error('[CocoCastAI] Model load failed:', err);
+        setModelStatus('error');
+      });
+  }, []);
 
   // ── Handle file drop: run backend inference ────────────────────────
   const handleFileDrop = useCallback(async (file: File) => {
@@ -51,9 +63,29 @@ export default function ScanPage() {
     setProgress(40);
 
     try {
-      const inferenceResult = await predictMobileDisease(file);
-      setProgress(100);
+      // ── Step 1: Run On-Device Inference (Primary) ───────────────
+      // We create a temporary image element to run TF.js inference
+      const img = new Image();
+      img.src = objectUrl;
+      
+      // Wait for image to load before running inference
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
 
+      setProgress(60);
+      
+      let inferenceResult;
+      try {
+        console.log('[CocoCastAI] Attempting on-device inference...');
+        inferenceResult = await runInference(img);
+      } catch (inferenceErr) {
+        console.warn('[CocoCastAI] On-device inference failed, falling back to backend:', inferenceErr);
+        setProgress(70);
+        inferenceResult = await predictMobileDisease(file);
+      }
+
+      setProgress(100);
       setResult(inferenceResult);
       setAnalyzing(false);
 
