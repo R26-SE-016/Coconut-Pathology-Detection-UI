@@ -221,14 +221,17 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* System A Card — Coming Soon */}
-        <div
-          className="glass-card-static"
+        {/* System A Card — Active */}
+        <Link
+          href="/dashboard/heatmaps"
+          className="glass-card"
           style={{
             padding: 'var(--space-5)',
-            opacity: 0.55,
             position: 'relative',
             overflow: 'hidden',
+            textDecoration: 'none',
+            color: 'inherit',
+            display: 'block',
           }}
         >
           <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-4)' }}>
@@ -238,33 +241,33 @@ export default function DashboardOverview() {
                   width: 10,
                   height: 10,
                   borderRadius: '50%',
-                  background: 'var(--text-muted)',
+                  background: 'var(--cyan)',
+                  boxShadow: '0 0 8px rgba(6, 182, 212, 0.6)',
                 }}
               />
-              <h3 style={{ fontSize: '0.95rem' }}>System A — UAV Analysis</h3>
+              <h3 style={{ fontSize: '0.95rem' }}>System A — Aerial Spectral & Morphological</h3>
             </div>
-            <span className="badge badge-cyan">Coming Soon</span>
+            <span className="badge badge-emerald">Active Pipeline</span>
           </div>
           <p className="text-sm" style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-3)' }}>
-            SAHI + YOLOv11 pipeline for 4K orthomosaic analysis. Designed for estate owners and
-            researchers with access to UAV imagery — macroscopic disease mapping at scale.
+            Dual-Index (NDVI & VARI) spectral analytics with morphological Euclidean Distance Transform crown apex extraction and local Z-Score hotspot detection.
           </p>
           <div className="flex gap-2">
-            <DiseaseBadge disease="v_cut" size="sm" />
-            <DiseaseBadge disease="scorching" size="sm" />
-            <DiseaseBadge disease="wilting" size="sm" />
+            <span className="badge badge-cyan" style={{ fontSize: '0.7rem' }}>NDVI / VARI Heatmaps</span>
+            <span className="badge badge-cyan" style={{ fontSize: '0.7rem' }}>Discrete Palm Census</span>
+            <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>Z-Score Hotspots</span>
           </div>
           {/* Overlay */}
           <div
             style={{
               position: 'absolute',
-              top: 12,
-              right: 12,
+              top: 16,
+              right: 16,
             }}
           >
-            <HiOutlineMap style={{ fontSize: '1.3rem', color: 'var(--text-muted)', opacity: 0.3 }} />
+            <HiOutlineMap style={{ fontSize: '1.4rem', color: 'var(--cyan)', opacity: 0.6 }} />
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Recent Activity */}

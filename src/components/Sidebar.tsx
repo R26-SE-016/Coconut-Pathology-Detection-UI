@@ -76,16 +76,16 @@ export default function Sidebar() {
             A
           </span>
           UAV Analysis
-          <span className={styles.comingSoon}>Coming Soon</span>
+          <span className="badge badge-emerald" style={{ marginLeft: 'auto', fontSize: '0.65rem', padding: '1px 6px' }}>Active</span>
         </div>
-        {SYSTEM_A_ITEMS.map((item) => renderNavItem(item, true))}
+        {SYSTEM_A_ITEMS.map((item) => renderNavItem(item, false))}
       </nav>
 
       {/* System Info */}
       <div className={styles.footer}>
         <div className={styles.systemInfo}>
-          <div className={styles.systemDot} />
-          <span className="text-xs text-muted">System B Online</span>
+          <div className={styles.systemDot} style={{ background: 'var(--emerald)' }} />
+          <span className="text-xs text-muted">Systems A & B Online</span>
         </div>
         <div className="text-xs text-muted" style={{ marginTop: 4 }}>
           v1.0.0 — R26-SE-016
