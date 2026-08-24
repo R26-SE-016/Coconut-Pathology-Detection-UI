@@ -9,7 +9,8 @@ import type {
   SyncResponse,
 } from './types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:5001/coconut-pathology-detection/asia-south1';
+const API_BASE = RAW_API_BASE.replace('localhost', '127.0.0.1');
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -105,4 +106,91 @@ export async function predictMobileDisease(file: File): Promise<any> {
     throw err;
   }
 }
+
+// ── System A — Aerial Spectral Analysis (NDVI & VARI) ───────────────
+
+import type {
+  SpectralIndexType,
+  SpectralAnalysisResponse,
+  CanopyHotspotsResponse,
+  CanopyHotspot,
+} from './types';
+
+export async function processAerialSpectral(
+  imageFile: File,
+  estateId: string = 'estate_001',
+  indexType: SpectralIndexType = 'VARI',
+  nirFile?: File,
+  gpsBounds?: { lat: number; lng: number; span_lat: number; span_lng: number }
+): Promise<SpectralAnalysisResponse> {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  formData.append('estate_id', estateId);
+  formData.append('index_type', indexType);
+
+  if (nirFile) {
+    formData.append('nir_image', nirFile);
+  }
+  if (gpsBounds) {
+    formData.append('gps_bounds', JSON.stringify(gpsBounds));
+  }
+
+  const url = `${API_BASE.replace(/\/$/, '')}/process_aerial_spectral`;
+  console.log(`[CocoCastAI] Calling aerial spectral processing: ${url} (mode: ${indexType})`);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errorDetail = '';
+      try {
+        const body = await res.json();
+        errorDetail = body.error || JSON.stringify(body);
+      } catch (e) {
+        errorDetail = `Status ${res.status}`;
+      }
+      throw new Error(`Spectral API error: ${errorDetail}`);
+    }
+
+    return res.json();
+  } catch (err: any) {
+    console.error(`[CocoCastAI] Spectral analysis API call failed for ${url}:`, err);
+    throw err;
+  }
+}
+
+export async function getCanopyHotspots(
+  estateId: string,
+  status?: string,
+  limit = 50
+): Promise<CanopyHotspotsResponse> {
+  const params = new URLSearchParams({ estate_id: estateId, limit: String(limit) });
+  if (status) params.set('status', status);
+
+  return apiFetch<CanopyHotspotsResponse>(
+    `${API_BASE}/get_canopy_hotspots?${params}`
+  );
+}
+
+export async function updateHotspotStatus(
+  hotspotId: string,
+  status: 'pending' | 'inspected' | 'resolved',
+  leafDiagnosticId?: string
+): Promise<{ success: boolean; hotspot_id: string; status: string }> {
+  return apiFetch<{ success: boolean; hotspot_id: string; status: string }>(
+    `${API_BASE}/update_hotspot_status`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        hotspot_id: hotspotId,
+        status,
+        leaf_diagnostic_id: leafDiagnosticId,
+      }),
+    }
+  );
+}
+
 
