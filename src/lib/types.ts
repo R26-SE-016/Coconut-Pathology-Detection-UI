@@ -217,3 +217,62 @@ export const DISEASE_COLORS: Record<string, DiseaseInfo> = {
     description: 'Crown wilting symptom',
   },
 };
+
+// ── Spectral Analysis (NDVI & VARI) Types ────────────────────────────
+
+export type SpectralIndexType = 'NDVI' | 'VARI';
+
+export interface CanopyHotspot {
+  id: string;
+  estate_id?: string;
+  heatmap_id?: string;
+  index_type?: SpectralIndexType;
+  location: GeoPoint;
+  pixel_coordinates?: { x: number; y: number };
+  mean_index_value: number;
+  severity: 'critical' | 'high' | 'moderate';
+  area_sq_pixels?: number;
+  radius_meters: number;
+  recommended_action: string;
+  z_score?: number;
+  relative_drop_pct?: number;
+  status: 'pending' | 'inspected' | 'resolved';
+  created_at?: string;
+  leaf_diagnostic_id?: string;
+}
+
+export interface SpectralStatistics {
+  mean_index: number;
+  min_index: number;
+  max_index: number;
+  canopy_coverage_pct: number;
+  ground_exposure_pct?: number;
+  healthy_canopy_pct: number;
+  moderate_stress_pct: number;
+  severe_stress_pct: number;
+  estate_health_grade?: string;
+  pathology_risk_index?: string;
+  estimated_palms_count?: number;
+  healthy_palms_count?: number;
+  at_risk_palms_count?: number;
+  total_hotspots_count?: number;
+}
+
+export interface SpectralAnalysisResponse {
+  estate_id: string;
+  index_type: SpectralIndexType;
+  image_dimensions: { width: number; height: number };
+  statistics: SpectralStatistics;
+  heatmap_base64: string;
+  hotspots: CanopyHotspot[];
+  created_at: string;
+  heatmap_id?: string;
+  source?: string;
+}
+
+export interface CanopyHotspotsResponse {
+  estate_id: string;
+  count: number;
+  hotspots: CanopyHotspot[];
+}
+
