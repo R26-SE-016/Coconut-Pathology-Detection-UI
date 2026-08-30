@@ -1,7 +1,10 @@
 <div align="center">
 
-# 🥥 SaruPol — Coconut Pathology Detection Suite
+<img src="./docs/brand/logo-text.png" alt="සරුපොල් (SaruPol)" width="380" />
+<br/>
+<img src="./docs/brand/logo-icon.png" alt="SaruPol Icon" width="80" />
 
+### 🥥 සරුපොල් (SaruPol) — Coconut Pathology Detection Suite
 **Multiscale Computer Vision Ecosystem & Interactive Agronomic Dashboard for Coconut Palm Pathology**
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.x-black.svg?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -10,7 +13,7 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![WebAssembly](https://img.shields.io/badge/Runtime-WebAssembly%20%2F%20TFLite-654FF0.svg?logo=webassembly&logoColor=white)](https://webassembly.org/)
 [![Firebase](https://img.shields.io/badge/Backend-Firebase%20Gen%202-FFCA28.svg?logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)]()
+[![Status](https://img.shields.io/badge/Status-Production%20Live-brightgreen.svg)](https://saru-pol-web.vercel.app/pathology)
 
 </div>
 
