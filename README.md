@@ -170,7 +170,7 @@ Coconut-Pathology-Detection-UI/
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:8000` | Address of the deployed `SaruPol-Gateway` (or Cloud Run URL) |
+| `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:8000` | `https://sarupol-gateway-636168956069.asia-south1.run.app` |
 
 ---
 
