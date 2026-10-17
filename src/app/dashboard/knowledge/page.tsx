@@ -77,9 +77,26 @@ export default function KnowledgePage() {
               {/* Header */}
               <div className="flex items-center justify-between" style={{ marginBottom: isExpanded ? 'var(--space-4)' : 0 }}>
                 <div>
-                  <h3 style={{ fontSize: '1rem', marginBottom: 2 }}>
-                    {entry.common_name}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 style={{ fontSize: '1rem', marginBottom: 2 }}>
+                      {entry.common_name}
+                    </h3>
+                    {entry.circular_no && (
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          background: 'rgba(56, 189, 248, 0.15)',
+                          color: 'var(--blue, #38bdf8)',
+                          border: '1px solid rgba(56, 189, 248, 0.3)',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {entry.circular_no}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted" style={{ fontStyle: 'italic' }}>
                     {entry.scientific_name}
                   </div>
@@ -102,96 +119,203 @@ export default function KnowledgePage() {
                 <div
                   className="animate-fadeIn"
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 'var(--space-5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-4)',
                     marginTop: 'var(--space-2)',
                   }}
                 >
-                  {/* Symptoms */}
-                  <div>
-                    <div className="flex items-center gap-2" style={{ marginBottom: 'var(--space-3)' }}>
-                      <HiOutlineExclamationCircle style={{ color: 'var(--orange)' }} />
-                      <h4 style={{ fontSize: '0.85rem' }}>Symptoms</h4>
-                    </div>
-                    <ul
-                      style={{
-                        listStyle: 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 6,
-                      }}
-                    >
-                      {entry.symptoms.map((s, i) => (
-                        <li
-                          key={i}
+                  {/* Vulnerable Palm Stage & Predisposing Factors */}
+                  {(entry.susceptible_stage || (entry.predisposing_factors && entry.predisposing_factors.length > 0)) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                      {entry.susceptible_stage && (
+                        <div
                           style={{
-                            fontSize: '0.8rem',
-                            color: 'var(--text-secondary)',
-                            paddingLeft: 14,
-                            position: 'relative',
+                            padding: 'var(--space-3)',
+                            background: 'rgba(234, 179, 8, 0.05)',
+                            border: '1px solid rgba(234, 179, 8, 0.2)',
+                            borderRadius: 'var(--radius-md)',
                           }}
                         >
-                          <span
+                          <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: 4 }}>
+                            Vulnerable Palm Stage
+                          </h4>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{entry.susceptible_stage}</p>
+                        </div>
+                      )}
+                      {entry.predisposing_factors && entry.predisposing_factors.length > 0 && (
+                        <div
+                          style={{
+                            padding: 'var(--space-3)',
+                            background: 'rgba(239, 68, 68, 0.05)',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            borderRadius: 'var(--radius-md)',
+                          }}
+                        >
+                          <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--red)', marginBottom: 4 }}>
+                            Predisposing Factors
+                          </h4>
+                          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4, padding: 0 }}>
+                            {entry.predisposing_factors.map((f, idx) => (
+                              <li key={idx} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>• {f}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Symptoms & Treatment Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-5)' }}>
+                    {/* Symptoms */}
+                    <div>
+                      <div className="flex items-center gap-2" style={{ marginBottom: 'var(--space-3)' }}>
+                        <HiOutlineExclamationCircle style={{ color: 'var(--orange)' }} />
+                        <h4 style={{ fontSize: '0.85rem' }}>Diagnostic Symptoms</h4>
+                      </div>
+                      <ul
+                        style={{
+                          listStyle: 'none',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 6,
+                        }}
+                      >
+                        {entry.symptoms.map((s, i) => (
+                          <li
+                            key={i}
                             style={{
-                              position: 'absolute',
-                              left: 0,
-                              color: 'var(--text-muted)',
+                              fontSize: '0.8rem',
+                              color: 'var(--text-secondary)',
+                              paddingLeft: 14,
+                              position: 'relative',
                             }}
                           >
-                            •
-                          </span>
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
+                            <span
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                color: 'var(--text-muted)',
+                              }}
+                            >
+                              •
+                            </span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Treatment */}
+                    <div>
+                      <div className="flex items-center gap-2" style={{ marginBottom: 'var(--space-3)' }}>
+                        <HiOutlineBeaker style={{ color: 'var(--green-400)' }} />
+                        <h4 style={{ fontSize: '0.85rem' }}>Treatment Protocols</h4>
+                      </div>
+                      <ul
+                        style={{
+                          listStyle: 'none',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 6,
+                        }}
+                      >
+                        {entry.treatment_protocols.map((t, i) => (
+                          <li
+                            key={i}
+                            style={{
+                              fontSize: '0.8rem',
+                              color: 'var(--text-secondary)',
+                              paddingLeft: 14,
+                              position: 'relative',
+                            }}
+                          >
+                            <span
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                color: 'var(--green-400)',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {i + 1}.
+                            </span>
+                            {t}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
 
-                  {/* Treatment */}
-                  <div>
-                    <div className="flex items-center gap-2" style={{ marginBottom: 'var(--space-3)' }}>
-                      <HiOutlineBeaker style={{ color: 'var(--green-400)' }} />
-                      <h4 style={{ fontSize: '0.85rem' }}>Treatment Protocols</h4>
-                    </div>
-                    <ul
+                  {/* Preventive Measures */}
+                  {entry.preventive_measures && entry.preventive_measures.length > 0 && (
+                    <div
                       style={{
-                        listStyle: 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 6,
+                        padding: 'var(--space-3) var(--space-4)',
+                        background: 'rgba(56, 189, 248, 0.05)',
+                        border: '1px solid rgba(56, 189, 248, 0.2)',
+                        borderRadius: 'var(--radius-md)',
                       }}
                     >
-                      {entry.treatment_protocols.map((t, i) => (
-                        <li
-                          key={i}
+                      <h4 style={{ fontSize: '0.8rem', color: 'var(--blue, #38bdf8)', marginBottom: 6 }}>
+                        Field Preventive Protocols
+                      </h4>
+                      <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4, padding: 0 }}>
+                        {entry.preventive_measures.map((p, idx) => (
+                          <li key={idx} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>• {p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Recipes */}
+                  {entry.recipes && entry.recipes.length > 0 && (
+                    <div>
+                      <h4 style={{ fontSize: '0.85rem', color: 'var(--amber)', marginBottom: 'var(--space-2)' }}>
+                        Official CRI Mixture Recipes
+                      </h4>
+                      {entry.recipes.map((rcp, rIdx) => (
+                        <div
+                          key={rIdx}
                           style={{
-                            fontSize: '0.8rem',
-                            color: 'var(--text-secondary)',
-                            paddingLeft: 14,
-                            position: 'relative',
+                            padding: 'var(--space-3)',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 'var(--radius-md)',
+                            marginBottom: 'var(--space-2)',
                           }}
                         >
-                          <span
-                            style={{
-                              position: 'absolute',
-                              left: 0,
-                              color: 'var(--green-400)',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {i + 1}.
-                          </span>
-                          {t}
-                        </li>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                            {rcp.title}
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', fontSize: '0.75rem' }}>
+                            <div>
+                              <strong style={{ color: 'var(--amber)' }}>Ingredients:</strong>
+                              <ul style={{ listStyle: 'none', padding: 0, marginTop: 2 }}>
+                                {rcp.ingredients.map((ing, i) => <li key={i}>• {ing}</li>)}
+                              </ul>
+                            </div>
+                            <div>
+                              <strong style={{ color: 'var(--green-400)' }}>Procedure:</strong>
+                              <ol style={{ paddingLeft: 14, marginTop: 2 }}>
+                                {rcp.steps.map((st, i) => <li key={i}>{st}</li>)}
+                              </ol>
+                            </div>
+                          </div>
+                          {rcp.safety && (
+                            <div style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--red)' }}>
+                              ⚠ <strong>Safety:</strong> {rcp.safety}
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </ul>
-                  </div>
+                    </div>
+                  )}
 
                   {/* Advisory note */}
                   {entry.vernacular_advice && (
                     <div
                       style={{
-                        gridColumn: '1 / -1',
                         padding: 'var(--space-3) var(--space-4)',
                         background: 'rgba(34, 197, 94, 0.04)',
                         border: '1px solid rgba(34, 197, 94, 0.1)',
@@ -211,7 +335,7 @@ export default function KnowledgePage() {
                   )}
 
                   {entry.source && (
-                    <div className="text-xs text-muted" style={{ gridColumn: '1 / -1' }}>
+                    <div className="text-xs text-muted">
                       Source: {entry.source}
                     </div>
                   )}

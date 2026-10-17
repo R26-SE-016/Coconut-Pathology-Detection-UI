@@ -108,8 +108,18 @@ export interface KnowledgeEntry {
   id?: string;
   common_name: string;
   scientific_name: string;
+  circular_no?: string;
+  susceptible_stage?: string;
+  predisposing_factors?: string[];
   symptoms: string[];
   treatment_protocols: string[];
+  preventive_measures?: string[];
+  recipes?: Array<{
+    title: string;
+    ingredients: string[];
+    steps: string[];
+    safety?: string;
+  }>;
   vernacular_advice?: string;
   severity_level: SeverityLevel;
   source?: string;
